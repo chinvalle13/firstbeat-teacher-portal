@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { supabase } from "./supabase"
 
 export default function App(){
@@ -15,7 +15,9 @@ CLYDE:{name:"Clyde"},
 CJ:{name:"CJ"},
 ALEX:{name:"Alex"},
 TODD:{name:"Todd"},
-CHIN:{name:"Chin"}
+CHIN:{name:"Chin"},
+NELLE:{name:"Nelle"},
+JOSEPH:{name:"Joseph"}
 }
 
 const [code,setCode]=useState("")
@@ -42,10 +44,12 @@ const { data } = await supabase
 .order("id",{ascending:false})
 
 if(data){
+
 setLogs(data)
 
 const uniqueStudents=[...new Set(data.map(d=>d.student))]
 setStudents(uniqueStudents)
+
 }
 
 }
@@ -96,6 +100,14 @@ setLogs(logs.filter(log=>log.id!==id))
 
 }
 
+function logout(){
+
+setTeacher(null)
+setLogs([])
+setStudents([])
+
+}
+
 if(!teacher){
 
 return(
@@ -136,9 +148,21 @@ return(
 
 <div style={{padding:20}}>
 
-<h2 style={{textAlign:"center"}}>
+<div style={{
+display:"flex",
+justifyContent:"space-between",
+alignItems:"center"
+}}>
+
+<h2>
 Welcome {teacher.name}
 </h2>
+
+<button onClick={logout} style={{padding:10}}>
+Logout
+</button>
+
+</div>
 
 <div style={{marginBottom:20}}>
 
