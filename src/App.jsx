@@ -4,18 +4,18 @@ import { supabase } from "./supabase"
 export default function App(){
 
 const teachers={
-YEYE:{name:"Yeye",students:[]},
-JASON:{name:"Jason",students:[]},
-ART:{name:"Art",students:[]},
-PAU:{name:"Pau",students:[]},
-NIAH:{name:"Niah",students:[]},
-VIA:{name:"Via",students:[]},
-JAREA:{name:"Jarea",students:[]},
-CLYDE:{name:"Clyde",students:[]},
-CJ:{name:"CJ",students:[]},
-ALEX:{name:"Alex",students:[]},
-TODD:{name:"Todd",students:[]},
-CHIN:{name:"Chin",students:[]}
+YEYE:{name:"Yeye"},
+JASON:{name:"Jason"},
+ART:{name:"Art"},
+PAU:{name:"Pau"},
+NIAH:{name:"Niah"},
+VIA:{name:"Via"},
+JAREA:{name:"Jarea"},
+CLYDE:{name:"Clyde"},
+CJ:{name:"CJ"},
+ALEX:{name:"Alex"},
+TODD:{name:"Todd"},
+CHIN:{name:"Chin"}
 }
 
 const [code,setCode]=useState("")
@@ -24,13 +24,28 @@ const [students,setStudents]=useState([])
 const [newStudent,setNewStudent]=useState("")
 const [logs,setLogs]=useState([])
 
-function login(){
+async function login(){
 
-if(teachers[code]){
-setTeacher(teachers[code])
-setStudents(teachers[code].students)
-}else{
+const t = teachers[code]
+
+if(!t){
 alert("Invalid Teacher Code")
+return
+}
+
+setTeacher(t)
+
+const { data } = await supabase
+.from("lesson_logs")
+.select("*")
+.eq("teacher", t.name)
+.order("id",{ascending:false})
+
+if(data){
+setLogs(data)
+
+const uniqueStudents=[...new Set(data.map(d=>d.student))]
+setStudents(uniqueStudents)
 }
 
 }
@@ -52,7 +67,7 @@ async function addLog(student,date,comment){
 
 if(!date) return
 
-const { data, error } = await supabase
+const { data } = await supabase
 .from("lesson_logs")
 .insert([
 {
@@ -65,7 +80,7 @@ comment:comment
 .select()
 
 if(data){
-setLogs([...logs,...data])
+setLogs([...data,...logs])
 }
 
 }
@@ -80,25 +95,6 @@ await supabase
 setLogs(logs.filter(log=>log.id!==id))
 
 }
-
-useEffect(()=>{
-
-async function loadLogs(){
-
-const { data } = await supabase
-.from("lesson_logs")
-.select("*")
-.order("id",{ascending:false})
-
-if(data){
-setLogs(data)
-}
-
-}
-
-loadLogs()
-
-},[])
 
 if(!teacher){
 
