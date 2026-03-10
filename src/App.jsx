@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react"
+import { supabase } from "./supabase"
 
 export default function App(){
 
@@ -47,29 +48,57 @@ function getLessonCount(student){
 return logs.filter(log=>log.student===student).length
 }
 
-function addLog(student,date,comment){
+async function addLog(student,date,comment){
 
 if(!date) return
 
-setLogs([
-...logs,
+const { data, error } = await supabase
+.from("lesson_logs")
+.insert([
 {
 teacher:teacher.name,
-student,
-date,
-comment
+student:student,
+date:date,
+comment:comment
 }
 ])
+.select()
+
+if(data){
+setLogs([...logs,...data])
+}
 
 }
 
-function deleteLog(index){
+async function deleteLog(id){
 
-const updated=[...logs]
-updated.splice(index,1)
-setLogs(updated)
+await supabase
+.from("lesson_logs")
+.delete()
+.eq("id",id)
+
+setLogs(logs.filter(log=>log.id!==id))
 
 }
+
+useEffect(()=>{
+
+async function loadLogs(){
+
+const { data } = await supabase
+.from("lesson_logs")
+.select("*")
+.order("id",{ascending:false})
+
+if(data){
+setLogs(data)
+}
+
+}
+
+loadLogs()
+
+},[])
 
 if(!teacher){
 
@@ -177,9 +206,9 @@ Log Lesson </button>
 
 <h3 style={{marginTop:30}}>Lesson History</h3>
 
-{logs.map((log,i)=>(
+{logs.map((log)=>(
 
-<div key={i} style={{
+<div key={log.id} style={{
 borderBottom:"1px solid #ccc",
 padding:10,
 display:"flex",
@@ -195,7 +224,7 @@ justifyContent:"space-between"
 </div>
 
 <button
-onClick={()=>deleteLog(i)}
+onClick={()=>deleteLog(log.id)}
 style={{height:35}}
 
 >
