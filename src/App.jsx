@@ -1,143 +1,260 @@
-import { useState, useEffect } from "react";
-import { createClient } from "@supabase/supabase-js";
+import { useState } from "react"
+import { supabase } from "./supabase"
 
-const supabase = createClient(
-  "YOUR_SUPABASE_URL",
-  "YOUR_SUPABASE_ANON_KEY"
-);
+export default function App(){
 
-export default function App() {
+const teachers={
+YEYE:{name:"Yeye"},
+JASON:{name:"Jason"},
+ART:{name:"Art"},
+PAU:{name:"Pau"},
+NIAH:{name:"Niah"},
+VIA:{name:"Via"},
+JAREA:{name:"Jarea"},
+CLYDE:{name:"Clyde"},
+CJ:{name:"CJ"},
+ALEX:{name:"Alex"},
+TODD:{name:"Todd"},
+CHIN:{name:"Chin"},
+NELLE:{name:"Nelle"},
+JOSEPH:{name:"Joseph"}
+}
 
-  const [teacher, setTeacher] = useState("");
-  const [loggedIn, setLoggedIn] = useState(false);
+const [code,setCode]=useState("")
+const [teacher,setTeacher]=useState(null)
+const [students,setStudents]=useState([])
+const [newStudent,setNewStudent]=useState("")
+const [logs,setLogs]=useState([])
 
-  const [students, setStudents] = useState([]);
+async function login(){
 
-  const [name, setName] = useState("");
-  const [instrument, setInstrument] = useState("");
-  const [level, setLevel] = useState("");
-  const [status, setStatus] = useState("");
+const t = teachers[code]
 
-  const teachers = {
-    NELLE: "1234",
-    JOSEPH: "1234"
-  };
+if(!t){
+alert("Invalid Teacher Code")
+return
+}
 
-  function login(user, pass){
+setTeacher(t)
 
-    if(teachers[user] === pass){
-      setTeacher(user);
-      setLoggedIn(true);
-      loadStudents(user);
-    }else{
-      alert("Wrong login");
-    }
+const { data } = await supabase
+.from("lesson_logs")
+.select("*")
+.eq("teacher", t.name)
+.order("id",{ascending:false})
 
-  }
+if(data){
 
-  async function loadStudents(t){
+setLogs(data)
 
-    const { data } = await supabase
-      .from("students")
-      .select("*")
-      .eq("teacher", t);
+const uniqueStudents=[...new Set(data.map(d=>d.student))]
+setStudents(uniqueStudents)
 
-    if(data) setStudents(data);
+}
 
-  }
+}
 
-  async function addStudent(){
+function addStudent(){
 
-    if(!name) return;
+if(!newStudent) return
 
-    await supabase
-      .from("students")
-      .insert([
-        {
-          name,
-          instrument,
-          level,
-          status,
-          teacher
-        }
-      ]);
+setStudents([...students,newStudent])
+setNewStudent("")
 
-    setName("");
-    setInstrument("");
-    setLevel("");
-    setStatus("");
+}
 
-    loadStudents(teacher);
-  }
+function getLessonCount(student){
+return logs.filter(log=>log.student===student).length
+}
 
-  if(!loggedIn){
+async function addLog(student,date,comment){
 
-    return(
+if(!date) return
 
-      <div style={{padding:40}}>
+const { data } = await supabase
+.from("lesson_logs")
+.insert([
+{
+teacher:teacher.name,
+student:student,
+date:date,
+comment:comment
+}
+])
+.select()
 
-        <h1>Teachers Login</h1>
+if(data){
+setLogs([...data,...logs])
+}
 
-        <button onClick={()=>login("NELLE","1234")}>
-          Login Nelle
-        </button>
+}
 
-        <button onClick={()=>login("JOSEPH","1234")}>
-          Login Joseph
-        </button>
+async function deleteLog(id){
 
-      </div>
+await supabase
+.from("lesson_logs")
+.delete()
+.eq("id",id)
 
-    );
+setLogs(logs.filter(log=>log.id!==id))
 
-  }
+}
 
-  return(
+function logout(){
 
-    <div style={{padding:40}}>
+setTeacher(null)
+setLogs([])
+setStudents([])
 
-      <h1>Teacher: {teacher}</h1>
+}
 
-      <h2>Add Student</h2>
+if(!teacher){
 
-      <input
-      placeholder="Student Name"
-      value={name}
-      onChange={e=>setName(e.target.value)}
-      />
+return(
 
-      <input
-      placeholder="Instrument"
-      value={instrument}
-      onChange={e=>setInstrument(e.target.value)}
-      />
+<div style={{
+display:"flex",
+justifyContent:"center",
+alignItems:"center",
+height:"100vh"
+}}>
 
-      <input
-      placeholder="Level"
-      value={level}
-      onChange={e=>setLevel(e.target.value)}
-      />
+<div style={{textAlign:"center"}}>
 
-      <input
-      placeholder="Status"
-      value={status}
-      onChange={e=>setStatus(e.target.value)}
-      />
+<h2>First Beat Teacher Portal</h2>
 
-      <button onClick={addStudent}>
-        Add Student
-      </button>
+<input
+placeholder="Teacher Code"
+value={code}
+onChange={(e)=>setCode(e.target.value.toUpperCase())}
+style={{padding:10}}
+/>
 
-      <h2>My Students</h2>
+<br/><br/>
 
-      {students.map((s,i)=>(
-        <div key={i}>
-          {s.name} - {s.instrument} - {s.level} - {s.status}
-        </div>
-      ))}
+<button onClick={login} style={{padding:10}}>
+Login
+</button>
 
-    </div>
+</div>
 
-  );
+</div>
+
+)
+
+}
+
+return(
+
+<div style={{padding:20}}>
+
+<div style={{
+display:"flex",
+justifyContent:"space-between",
+alignItems:"center"
+}}>
+
+<h2>
+Welcome {teacher.name}
+</h2>
+
+<button onClick={logout} style={{padding:10}}>
+Logout
+</button>
+
+</div>
+
+<div style={{marginBottom:20}}>
+
+<input
+placeholder="Add Student"
+value={newStudent}
+onChange={(e)=>setNewStudent(e.target.value)}
+style={{padding:10}}
+/>
+
+<button onClick={addStudent} style={{marginLeft:10,padding:10}}>
+Add
+</button>
+
+</div>
+
+{students.map((student,i)=>{
+
+let comment=""
+let date=new Date().toISOString().split("T")[0]
+
+return(
+
+<div key={i} style={{
+border:"1px solid #ccc",
+padding:15,
+marginBottom:15,
+borderRadius:10
+}}>
+
+<h3>{student}</h3>
+
+<p>Lessons: {getLessonCount(student)}</p>
+
+<input
+type="date"
+defaultValue={date}
+onChange={(e)=>date=e.target.value}
+style={{padding:10,width:"100%",marginBottom:10}}
+/>
+
+<input
+placeholder="Lesson comment (optional)"
+onChange={(e)=>comment=e.target.value}
+style={{padding:10,width:"100%",marginBottom:10}}
+/>
+
+<button
+style={{padding:10,width:"100%"}}
+onClick={()=>addLog(student,date,comment)}
+>
+Log Lesson
+</button>
+
+</div>
+
+)
+
+})}
+
+<h3 style={{marginTop:30}}>Lesson History</h3>
+
+{logs.map((log)=>(
+
+<div key={log.id} style={{
+borderBottom:"1px solid #ccc",
+padding:10,
+display:"flex",
+justifyContent:"space-between"
+}}>
+
+<div>
+
+<b>{log.student}</b><br/>
+{log.date}<br/>
+{log.comment}
+
+</div>
+
+<button
+onClick={()=>deleteLog(log.id)}
+style={{height:35}}
+>
+Delete
+</button>
+
+</div>
+
+))}
+
+</div>
+
+)
 
 }
