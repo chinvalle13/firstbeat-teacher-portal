@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
@@ -8,90 +8,136 @@ const supabase = createClient(
 
 export default function App() {
 
-  const teacher = "NELLE";
+  const [teacher, setTeacher] = useState("");
+  const [loggedIn, setLoggedIn] = useState(false);
 
   const [students, setStudents] = useState([]);
-  const [search, setSearch] = useState("");
 
-  useEffect(() => {
-    loadStudents();
-  }, []);
+  const [name, setName] = useState("");
+  const [instrument, setInstrument] = useState("");
+  const [level, setLevel] = useState("");
+  const [status, setStatus] = useState("");
 
-  async function loadStudents() {
+  const teachers = {
+    NELLE: "1234",
+    JOSEPH: "1234"
+  };
+
+  function login(user, pass){
+
+    if(teachers[user] === pass){
+      setTeacher(user);
+      setLoggedIn(true);
+      loadStudents(user);
+    }else{
+      alert("Wrong login");
+    }
+
+  }
+
+  async function loadStudents(t){
 
     const { data } = await supabase
       .from("students")
       .select("*")
-      .eq("teacher", teacher);
+      .eq("teacher", t);
 
-    if (data) {
-      setStudents(data);
-    }
+    if(data) setStudents(data);
+
   }
 
-  async function searchStudent() {
+  async function addStudent(){
 
-    const { data } = await supabase
+    if(!name) return;
+
+    await supabase
       .from("students")
-      .select("*")
-      .eq("teacher", teacher)
-      .ilike("name", `%${search}%`);
+      .insert([
+        {
+          name,
+          instrument,
+          level,
+          status,
+          teacher
+        }
+      ]);
 
-    if (data) {
-      setStudents(data);
-    }
+    setName("");
+    setInstrument("");
+    setLevel("");
+    setStatus("");
+
+    loadStudents(teacher);
   }
 
-  return (
-    <div style={{padding:40,fontFamily:"Arial"}}>
+  if(!loggedIn){
 
-      <h1>First Beat Teachers Portal</h1>
+    return(
 
-      <div style={{marginBottom:20}}>
+      <div style={{padding:40}}>
 
-        <input
-          placeholder="Search student"
-          value={search}
-          onChange={(e)=>setSearch(e.target.value)}
-          style={{padding:10,marginRight:10}}
-        />
+        <h1>Teachers Login</h1>
 
-        <button onClick={searchStudent} style={{padding:10}}>
-          Search
+        <button onClick={()=>login("NELLE","1234")}>
+          Login Nelle
         </button>
 
-        <button onClick={loadStudents} style={{padding:10,marginLeft:10}}>
-          Reload
+        <button onClick={()=>login("JOSEPH","1234")}>
+          Login Joseph
         </button>
 
       </div>
 
-      <table border="1" cellPadding="10" style={{width:"100%"}}>
+    );
 
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Instrument</th>
-            <th>Level</th>
-            <th>Status</th>
-          </tr>
-        </thead>
+  }
 
-        <tbody>
+  return(
 
-          {students.map((s,i)=>(
-            <tr key={i}>
-              <td>{s.name}</td>
-              <td>{s.instrument}</td>
-              <td>{s.level}</td>
-              <td>{s.status}</td>
-            </tr>
-          ))}
+    <div style={{padding:40}}>
 
-        </tbody>
+      <h1>Teacher: {teacher}</h1>
 
-      </table>
+      <h2>Add Student</h2>
+
+      <input
+      placeholder="Student Name"
+      value={name}
+      onChange={e=>setName(e.target.value)}
+      />
+
+      <input
+      placeholder="Instrument"
+      value={instrument}
+      onChange={e=>setInstrument(e.target.value)}
+      />
+
+      <input
+      placeholder="Level"
+      value={level}
+      onChange={e=>setLevel(e.target.value)}
+      />
+
+      <input
+      placeholder="Status"
+      value={status}
+      onChange={e=>setStatus(e.target.value)}
+      />
+
+      <button onClick={addStudent}>
+        Add Student
+      </button>
+
+      <h2>My Students</h2>
+
+      {students.map((s,i)=>(
+        <div key={i}>
+          {s.name} - {s.instrument} - {s.level} - {s.status}
+        </div>
+      ))}
 
     </div>
+
   );
+
 }
