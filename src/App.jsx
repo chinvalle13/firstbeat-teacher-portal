@@ -1,262 +1,97 @@
-import { useState } from "react"
-import { supabase } from "./supabase"
+import { useEffect, useState } from "react";
+import { createClient } from "@supabase/supabase-js";
 
-export default function App(){
+const supabase = createClient(
+  "YOUR_SUPABASE_URL",
+  "YOUR_SUPABASE_ANON_KEY"
+);
 
-const teachers={
-YEYE:{name:"Yeye"},
-JASON:{name:"Jason"},
-ART:{name:"Art"},
-PAU:{name:"Pau"},
-NIAH:{name:"Niah"},
-VIA:{name:"Via"},
-JAREA:{name:"Jarea"},
-CLYDE:{name:"Clyde"},
-CJ:{name:"CJ"},
-ALEX:{name:"Alex"},
-TODD:{name:"Todd"},
-CHIN:{name:"Chin"},
-NELLE:{name:"Nelle"},
-JOSEPH:{name:"Joseph"}
-}
+export default function App() {
 
-const [code,setCode]=useState("")
-const [teacher,setTeacher]=useState(null)
-const [students,setStudents]=useState([])
-const [newStudent,setNewStudent]=useState("")
-const [logs,setLogs]=useState([])
+  const teacher = "NELLE";
 
-async function login(){
+  const [students, setStudents] = useState([]);
+  const [search, setSearch] = useState("");
 
-const t = teachers[code]
+  useEffect(() => {
+    loadStudents();
+  }, []);
 
-if(!t){
-alert("Invalid Teacher Code")
-return
-}
+  async function loadStudents() {
 
-setTeacher(t)
+    const { data } = await supabase
+      .from("students")
+      .select("*")
+      .eq("teacher", teacher);
 
-const { data } = await supabase
-.from("lesson_logs")
-.select("*")
-.eq("teacher", t.name)
-.order("id",{ascending:false})
+    if (data) {
+      setStudents(data);
+    }
+  }
 
-if(data){
+  async function searchStudent() {
 
-setLogs(data)
+    const { data } = await supabase
+      .from("students")
+      .select("*")
+      .eq("teacher", teacher)
+      .ilike("name", `%${search}%`);
 
-const uniqueStudents=[...new Set(data.map(d=>d.student))]
-setStudents(uniqueStudents)
+    if (data) {
+      setStudents(data);
+    }
+  }
 
-}
+  return (
+    <div style={{padding:40,fontFamily:"Arial"}}>
 
-}
+      <h1>First Beat Teachers Portal</h1>
 
-function addStudent(){
+      <div style={{marginBottom:20}}>
 
-if(!newStudent) return
+        <input
+          placeholder="Search student"
+          value={search}
+          onChange={(e)=>setSearch(e.target.value)}
+          style={{padding:10,marginRight:10}}
+        />
 
-setStudents([...students,newStudent])
-setNewStudent("")
+        <button onClick={searchStudent} style={{padding:10}}>
+          Search
+        </button>
 
-}
+        <button onClick={loadStudents} style={{padding:10,marginLeft:10}}>
+          Reload
+        </button>
 
-function getLessonCount(student){
-return logs.filter(log=>log.student===student).length
-}
+      </div>
 
-async function addLog(student,date,comment){
+      <table border="1" cellPadding="10" style={{width:"100%"}}>
 
-if(!date) return
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Instrument</th>
+            <th>Level</th>
+            <th>Status</th>
+          </tr>
+        </thead>
 
-const { data } = await supabase
-.from("lesson_logs")
-.insert([
-{
-teacher:teacher.name,
-student:student,
-date:date,
-comment:comment
-}
-])
-.select()
+        <tbody>
 
-if(data){
-setLogs([...data,...logs])
-}
+          {students.map((s,i)=>(
+            <tr key={i}>
+              <td>{s.name}</td>
+              <td>{s.instrument}</td>
+              <td>{s.level}</td>
+              <td>{s.status}</td>
+            </tr>
+          ))}
 
-}
+        </tbody>
 
-async function deleteLog(id){
+      </table>
 
-await supabase
-.from("lesson_logs")
-.delete()
-.eq("id",id)
-
-setLogs(logs.filter(log=>log.id!==id))
-
-}
-
-function logout(){
-
-setTeacher(null)
-setLogs([])
-setStudents([])
-
-}
-
-if(!teacher){
-
-return(
-
-<div style={{
-display:"flex",
-justifyContent:"center",
-alignItems:"center",
-height:"100vh"
-}}>
-
-<div style={{textAlign:"center"}}>
-
-<h2>First Beat Teacher Portal</h2>
-
-<input
-placeholder="Teacher Code"
-value={code}
-onChange={(e)=>setCode(e.target.value.toUpperCase())}
-style={{padding:10}}
-/>
-
-<br/><br/>
-
-<button onClick={login} style={{padding:10}}>
-Login
-</button>
-
-</div>
-
-</div>
-
-)
-
-}
-
-return(
-
-<div style={{padding:20}}>
-
-<div style={{
-display:"flex",
-justifyContent:"space-between",
-alignItems:"center"
-}}>
-
-<h2>
-Welcome {teacher.name}
-</h2>
-
-<button onClick={logout} style={{padding:10}}>
-Logout
-</button>
-
-</div>
-
-<div style={{marginBottom:20}}>
-
-<input
-placeholder="Add Student"
-value={newStudent}
-onChange={(e)=>setNewStudent(e.target.value)}
-style={{padding:10}}
-/>
-
-<button onClick={addStudent} style={{marginLeft:10,padding:10}}>
-Add
-</button>
-
-</div>
-
-{students.map((student,i)=>{
-
-let comment=""
-let date=new Date().toISOString().split("T")[0]
-
-return(
-
-<div key={i} style={{
-border:"1px solid #ccc",
-padding:15,
-marginBottom:15,
-borderRadius:10
-}}>
-
-<h3>{student}</h3>
-
-<p>Lessons: {getLessonCount(student)}</p>
-
-<input
-type="date"
-defaultValue={date}
-onChange={(e)=>date=e.target.value}
-style={{padding:10,width:"100%",marginBottom:10}}
-/>
-
-<input
-placeholder="Lesson comment (optional)"
-onChange={(e)=>comment=e.target.value}
-style={{padding:10,width:"100%",marginBottom:10}}
-/>
-
-<button
-style={{padding:10,width:"100%"}}
-onClick={()=>addLog(student,date,comment)}
-
->
-
-Log Lesson </button>
-
-</div>
-
-)
-
-})}
-
-<h3 style={{marginTop:30}}>Lesson History</h3>
-
-{logs.map((log)=>(
-
-<div key={log.id} style={{
-borderBottom:"1px solid #ccc",
-padding:10,
-display:"flex",
-justifyContent:"space-between"
-}}>
-
-<div>
-
-<b>{log.student}</b><br/>
-{log.date}<br/>
-{log.comment}
-
-</div>
-
-<button
-onClick={()=>deleteLog(log.id)}
-style={{height:35}}
-
->
-
-Delete </button>
-
-</div>
-
-))}
-
-</div>
-
-)
-
+    </div>
+  );
 }
